@@ -1,0 +1,127 @@
+---
+title: "Modele Probabiliste"
+output: html_notebook
+---
+
+```{r Calcul pour un jour}
+
+library(mixtools)
+library(rlist)
+
+trafic <- read.csv("1209-2609_trafictot2.csv")
+#trafic <- read.csv("0712-0712_TEST.csv") #jour test
+trafic$TIM <- trafic$TIM*1.1
+trafic$Total <- trafic$Pietons+trafic$TIM+trafic$TC
+
+trafic <- trafic[c(25:48),] #selection du jour 13 septembre
+
+start_time <- Sys.time()
+#variables pour stocker les paramètres à la fin de la boucle
+weights <- list() 
+weights_sc <- list()
+ll <- list()
+ll_sc <- list()
+iter <- list()
+param_mu <- list()
+param_sigma <- list()
+param_mu_sc <- list()
+param_sigma_sc <- list()
+
+nmax <- 100
+niter <- 0
+diff <- 1e8
+mixmodel <- normalmixEM(trafic$Total, k = 3)
+current_loglike <- mixmodel$loglik
+mu <- mixmodel$mu
+mixmodel_sc <- normalmixEM(trafic$Swisscom, k= 3, mean.constr = mu) #on fit
+
+plot(mixmodel, which = 2, main2=paste("Débits totaux"),xlab2 = 'Débits', ylab2='Fréquences')
+lines(density(trafic$Total), lty =2, lwd = 2)
+  
+while(diff >= 1e-06 && niter <= nmax){
+  
+  niter = niter + 1
+  mu <- mixmodel$mu
+  sigma <- mixmodel$sigma
+  mixmodel_sc <- normalmixEM(trafic$Swisscom, k= 3, mean.constr = mu) #on fit
+  mixmodel <- normalmixEM(trafic$Total, lambda = mixmodel_sc$lambda, k = 3)
+  new_loglike <- mixmodel$loglik
+  diff <- abs(current_loglike-new_loglike)
+  current_loglike <- new_loglike
+  
+  plot(mixmodel_sc, which = 2, main2=paste("Débits SC, itération:",niter),xlab2 = 'Débits', ylab2='Fréquences')
+  lines(density(trafic$Swisscom), lty =2, lwd = 2)
+  
+  
+  }
+  
+  weights <- c(weights, list(mixmodel$lambda))
+  weights_sc <- c(weights_sc, list(mixmodel_sc$lambda))
+  ll <- c(ll, list(mixmodel$loglik))
+  ll_sc <- c(ll_sc, list(mixmodel_sc$loglik))
+  param_mu <- c(param_mu, list(mixmodel$mu))
+  param_mu_sc <- c(param_mu_sc, list(mixmodel_sc$mu))
+  param_sigma <- c(param_sigma, list(mixmodel$sigma))
+  param_sigma_sc <- c(param_sigma_sc, list(mixmodel_sc$sigma))
+
+  end_time <-Sys.time()
+  
+  end_time-start_time
+
+```
+```{r Calcul pour tous les jours de la période}
+library(mixtools)
+library(rlist)
+
+trafic <- read.csv("1209-2609_trafictot2.csv")
+trafic$TIM <- trafic$TIM*1.1
+trafic$Total <- trafic$Pietons+trafic$TIM+trafic$TC
+
+start_time <- Sys.time()
+#variables pour stocker les paramètres à la fin de la boucle
+weights <- list() 
+weights_sc <- list()
+ll <- list()
+ll_sc <- list()
+iter <- list()
+param_mu <- list()
+param_sigma <- list()
+param_mu_sc <- list()
+param_sigma_sc <- list()
+
+nmax <- 100
+niter <- 0
+diff <- 1e8
+mixmodel <- normalmixEM(trafic$Total, k = 3)
+current_loglike <- mixmodel$loglik
+mu <- mixmodel$mu
+mixmodel_sc <- normalmixEM(trafic$Swisscom, k= 3, mean.constr = mu) #on fit
+
+plot(mixmodel, which = 2, main2=paste("Débits totaux"),xlab2 = 'Débits', ylab2='Fréquences')
+lines(density(trafic$Total), lty =2, lwd = 2)
+  
+for (i in c(1:14)){
+   mask = seq(24*(i-1)+1,24*i)
+   t <- trafic[mask,]
+   diff <- 1e8
+   mixmodel <- normalmixEM(t$Total, k = 3)
+   current_loglike <- mixmodel$loglik
+   mu <- mixmodel$mu
+   mixmodel_sc <- normalmixEM(t$Swisscom, k= 3, mean.constr = mu) #on fit
+   nmax <- 100
+   niter <- 0
+  
+   while(diff >= 1e-06 && niter <= nmax){
+     niter = niter + 1
+     mu <- mixmodel$mu
+     sigma <- mixmodel$sigma
+     mixmodel_sc <- normalmixEM(t$Swisscom, k= 3, mean.constr = mu) #on fit
+     mixmodel <- normalmixEM(t$Total, lambda = mixmodel_sc$lambda, k = 3)
+     new_loglike <- mixmodel$loglik
+     diff <- abs(current_loglike-new_loglike)
+     current_loglike <- new_loglike
+     
+   }
+}
+```
+

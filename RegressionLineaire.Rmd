@@ -1,0 +1,47 @@
+---
+title: "Regression lineaire"
+output: html_notebook
+---
+```{r}
+library(readr)
+#trafic <- read_csv("1209-2609_trafictot2.csv")
+trafic <- read_csv("0712-0712_TEST.csv")
+trafic$TIM <- trafic$TIM *1.1 #multiplication du nombre de véhicules par le taux d'occupation moyen
+
+```
+
+```{r Première formulation du modele}
+library(jtools)
+
+regmodel = lm(Swisscom~Pietons+TIM+TC-1, data = trafic) #on essaye de prédire les valeurs de Swisscom avec les valeurs des capteurs
+summary(regmodel)
+```
+
+```{r Graphiques des resultats de la regression}
+library(ggplot2)
+
+par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
+plot(regmodel)
+
+
+par(mfrow = c(2, 2))  # Split the plotting panel into a 2 x 2 grid
+plot(regmodel2)
+
+
+```
+
+```{r Deuxieme iteration du modele}
+lm1 = lm(TIM~Swisscom-1, data = trafic)#on essaye de prédire les TIM avec les valeurs de Swisscom
+
+coeff = summary(lm1)$coefficients[1,1] #on récupère le coefficient obtenu avec la prédiction des TIM
+trafic$sc_sansveh = (1-coeff)*trafic$Swisscom #on recalcule la part de Swisscom qui devrait correspondre aux usagers restants
+
+lm2 = lm(Pietons~sc_sansveh-1, data = trafic)
+lm3 = lm(TC~sc_sansveh-1, data=trafic)
+
+summary(lm1)
+summary(lm2)
+summary(lm3)
+
+```
+
